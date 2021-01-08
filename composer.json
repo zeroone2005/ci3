@@ -1,5 +1,5 @@
 {
-	"name" : "cqyy codeigniter",
+	"name" : "cqyy_codeigniter",
 	"description" : "The CodeIgniter Application with Composer",
 	"require": {
 		"php": ">=5.3.2",
