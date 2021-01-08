@@ -223,6 +223,9 @@ switch (ENVIRONMENT)
  *  Now that we know the path, set the main path constants
  * -------------------------------------------------------------------
  */
+    //website folder
+    define('HOME', pathinfo(__FILE__, PATHINFO_DIRNAME));
+
 	// The name of THIS file
 	define('SELF', pathinfo(__FILE__, PATHINFO_BASENAME));
 
