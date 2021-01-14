@@ -648,6 +648,13 @@
             return $this;
         }
 
+
+        public function where_str($where_str = NULL)
+        {
+            if ($where_str) {
+                $this->where()
+            }
+        }
         /**
          * public function limit($limit, $offset = 0)
          * Sets a rows limit to the query
