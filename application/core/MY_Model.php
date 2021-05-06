@@ -97,7 +97,7 @@
         /** @var
          * This one will hold the database connection object
          */
-        protected $_database;
+        public $_database;
 
         /** @var null
          * Sets table name
@@ -648,13 +648,6 @@
             return $this;
         }
 
-
-        public function where_str($where_str = NULL)
-        {
-            if ($where_str) {
-                $this->where()
-            }
-        }
         /**
          * public function limit($limit, $offset = 0)
          * Sets a rows limit to the query
@@ -1744,12 +1737,16 @@
         {
             if (!isset($this->table)) {
                 $this->table = $this->_database->dbprefix($this->_get_table_name(get_class($this)));
-                if (!$this->db->table_exists($this->table)) {
+                if (!$this->_database->table_exists($this->table)) {
                     show_error(
                         sprintf('While trying to figure out the table name, couldn\'t find an existing table named: <strong>"%s"</strong>.<br />You can set the table name in your model by defining the protected variable <strong>$table</strong>.', $this->table),
                         500,
                         sprintf('Error trying to figure out table name for model "%s"', get_class($this))
                     );
+                }
+            } else {
+                if (FALSE === strpos($this->table, $this->_database->dbprefix)) {
+                    $this->table = $this->_database->dbprefix . $this->table;
                 }
             }
             $this->_set_table_fillable_protected();
@@ -1769,6 +1766,7 @@
             if (is_null($this->fillable)) {
 
                 $table_fields = $this->_database->list_fields($this->table);
+
                 foreach ($table_fields as $field) {
                     if (is_array($this->protected) && !in_array($field, $this->protected)) {
                         $this->fillable[] = $field;
@@ -1945,4 +1943,15 @@
             $this->cache->redis->save($cache_name, $cache_data, 10 * 24 * 3600);
         }
 
+        /**
+         * where字符串
+         * @param $str
+         * @return $this
+         */
+        public function where_str($str) {
+            if ($str) {
+                $this->where($str, NULL, NULL, FALSE, FALSE, TRUE);
+            }
+            return $this;
+        }
     }
