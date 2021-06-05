@@ -80,7 +80,7 @@
         public function __construct()
         {
             parent::__construct();
-            $this->checkLogin();
+            //$this->checkLogin(); //验证的登录
         }
 
         /**

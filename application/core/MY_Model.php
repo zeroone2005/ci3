@@ -1888,6 +1888,20 @@
             return $this;
         }
 
+
+        /**
+         * where字符串
+         * @param $str
+         * @return $this
+         */
+        public function where_str($str) {
+            if ($str) {
+                $this->where($str, NULL, NULL, FALSE, FALSE, TRUE);
+            }
+            return $this;
+        }
+
+
         /**
          * 下划线转驼峰(大驼峰)
          *
@@ -1943,15 +1957,4 @@
             $this->cache->redis->save($cache_name, $cache_data, 10 * 24 * 3600);
         }
 
-        /**
-         * where字符串
-         * @param $str
-         * @return $this
-         */
-        public function where_str($str) {
-            if ($str) {
-                $this->where($str, NULL, NULL, FALSE, FALSE, TRUE);
-            }
-            return $this;
-        }
     }
