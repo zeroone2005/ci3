@@ -192,18 +192,21 @@
          */
         public function getRegion($pid = 0, $level = 1, $country = 'cn')
         {
-            $config = $this->_CI->config->item('website')['cqyy_api'];
-            $this->_CI->load->library('Request');
-            $url  = $config['url'] . '/' . $config['ver'] . $config['api']['region'];
-            $data = [
-                'appid'     => $config['app_id'],
-                'token'     => $config['token'],
-                'country'   => $country,
-                'parent_id' => $pid,
-                'level'     => $level,
-            ];
+            $config = config_item('website')['sharkapi'];
 
-            $result = json_decode($this->_CI->request->ssl(FALSE)->simple_post($url, $data), TRUE);
+            $client   = new \GuzzleHttp\Client(['verify' => FALSE]);
+            $url      = $config['url'] . '/' . $config['ver'] . $config['api']['region'];
+            $response = $client->request('POST', $url, [
+                'form_params' => [
+                    'appid'     => $config['app_id'],
+                    'token'     => $config['token'],
+                    'country'   => $country,
+                    'parent_id' => $pid,
+                    'level'     => $level,
+                ],
+            ]);
+            $content  = $response->getBody()->getContents();
+            $result   = json_decode($content, TRUE);
             if (0 == $result['code']) {
                 $res = $result['data'];
             } else {
@@ -222,6 +225,16 @@
             if (0 > $no) {
                 $no = abs($no);
             }
+            return $prefix . $no;
+        }
+
+        /**
+         * 返回随机简易编号
+         * @return string
+         */
+        public function getSimpleNo($prefix = '')
+        {
+            $no = abs(crc32(uniqid()));
             return $prefix . $no;
         }
 
@@ -297,7 +310,7 @@
                     }
                 }
             }
-            return ip2long($ip);
+            return $ip;
         }
 
 
@@ -318,6 +331,62 @@
                     'content' => $content,
                     'mobile'  => $mobile,
                 ],
+            ]);
+            return json_decode($response->getBody()->getContents(), TRUE);
+        }
+
+
+        /**
+         * 发送邮件
+         * @param $email
+         * @param $title
+         * @param $content
+         */
+        public function sendEmail($email, $title, $content)
+        {
+            $client = new \GuzzleHttp\Client(['verify' => FALSE]);
+            $api    = config_item('website')['sharkapi'];
+            $url    = $api['url'] . '/' . $api['ver'] . $api['api']['email'];
+
+            $data     = [
+                'form_params' => [
+                    'appid'   => $api['app_id'],
+                    'token'   => $api['token'],
+                    'email'   => $email,
+                    'title'   => $title,
+                    'content' => $content,
+                    'mailer'  => 'tnt',
+                ],
+            ];
+            $response = $client->request('POST', $url, $data);
+            $data     = $response->getBody()->getContents();
+            return json_decode($data, TRUE);
+        }
+
+        /**
+         * 发送微信模板消息
+         * @param        $openid      //用户openid
+         * @param        $template_id //微信消息模板id
+         * @param string $data        //模板数据
+         * @param string $url         //跳转url
+         * @return mixed
+         * @throws \GuzzleHttp\Exception\GuzzleException
+         */
+        public function sendWechatTemplateMsg($openid, $template_id, $data = '', $jump_url = '')
+        {
+            $client    = new \GuzzleHttp\Client(['verify' => FALSE]);
+            $api       = config_item('website')['sharkapi'];
+            $url       = $api['url'] . '/' . $api['ver'] . $api['api']['wechat'];
+            $form_data = [
+                'appid'      => $api['app_id'],
+                'token'      => $api['token'],
+                'openid'     => $openid,
+                'templateId' => $template_id,
+                'data'       => $data,
+                'url'        => $jump_url,
+            ];
+            $response  = $client->request('POST', $url, [
+                'form_params' => $form_data,
             ]);
             return json_decode($response->getBody()->getContents(), TRUE);
         }
@@ -434,7 +503,7 @@
             $url       = $config['api_url'] . $url;
             $response  = $client->request('POST', $url, $post_data);
             $content   = $response->getBody()->getContents();
-            $result = json_decode($content, TRUE);
+            $result    = json_decode($content, TRUE);
             //$this->log('push', '返回值：' . $content);
             return $result;
         }
@@ -463,5 +532,165 @@
             $content  = $response->getBody()->getContents();
             $result   = json_decode($content, TRUE);
             return $result;
+        }
+
+        /**
+         * @param $part  年月日时分秒
+         * @param $begin 起始日期 日期字符串/时间戳
+         * @param $end   结束日期
+         * @return false|int|string|null
+         */
+        function dateDiff($part, $begin, $end)
+        {
+            if (!is_numeric($begin)) $begin = strtotime($begin);
+            if (!is_numeric($end)) $end = strtotime($end);
+
+            $diff = $end - $begin;
+            switch ($part) {
+                case "y":
+                    $retval = bcdiv($diff, (60 * 60 * 24 * 365));
+                    break;
+                case "m":
+                    $retval = bcdiv($diff, (60 * 60 * 24 * 30));
+                    break;
+                case "w":
+                    $retval = bcdiv($diff, (60 * 60 * 24 * 7));
+                    break;
+                case "d":
+                    $retval = bcdiv($diff, (60 * 60 * 24));
+                    break;
+                case "h":
+                    $retval = bcdiv($diff, (60 * 60));
+                    break;
+                case "n":
+                    $retval = bcdiv($diff, 60);
+                    break;
+                case "s":
+                    $retval = $diff;
+                    break;
+            }
+            return $retval;
+        }
+
+        /**
+         * @param $part   年月日时分秒
+         * @param $number 加多少
+         * @param $date   日期
+         * @param $type   1 时间戳  2日期格式
+         * @return false|string
+         */
+        function dateAdd($part, $number, $date, $type = 2)
+        {
+            if (!is_numeric($date)) $date = strtotime($date);
+            $date_array = getdate($date);
+            $hor        = $date_array["hours"];
+            $min        = $date_array["minutes"];
+            $sec        = $date_array["seconds"];
+            $mon        = $date_array["mon"];
+            $day        = $date_array["mday"];
+            $yar        = $date_array["year"];
+            switch ($part) {
+                case "y":
+                    $yar += $number;
+                    break;
+                case "q":
+                    $mon += ($number * 3);
+                    break;
+                case "m":
+                    $mon += $number;
+                    break;
+                case "w":
+                    $day += ($number * 7);
+                    break;
+                case "d":
+                    $day += $number;
+                    break;
+                case "h":
+                    $hor += $number;
+                    break;
+                case "n":
+                    $min += $number;
+                    break;
+                case "s":
+                    $sec += $number;
+                    break;
+            }
+
+            if (2 == $type) {
+               $return =  date("Y-m-d H:i:s", mktime($hor, $min, $sec, $mon, $day, $yar));
+            } else {
+                $return = mktime($hor, $min, $sec, $mon, $day, $yar);
+            }
+            return $return;
+        }
+
+        /**
+         * 格式输出日期 是多少天前
+         * @param $date
+         * @return string
+         */
+        public function formatTime($date)
+        {
+            $str = '';
+            if (!is_numeric($date)) {
+                $timer = strtotime($date);
+            } else {
+                $timer = $date;
+            }
+            $diff = time() - $timer;
+            $day  = floor($diff / 86400);
+            $free = $diff % 86400;
+            if ($day > 0) {
+                return $day . "天前";
+            } else {
+                if ($free > 0) {
+                    $hour = floor($free / 3600);
+                    $free = $free % 3600;
+                    if ($hour > 0) {
+                        return $hour . "小时前";
+                    } else {
+                        if ($free > 0) {
+                            $min  = floor($free / 60);
+                            $free = $free % 60;
+                            if ($min > 0) {
+                                return $min . "分钟前";
+                            } else {
+                                //if($free > 0){
+                                //    return $free . " 秒前";
+                                //}else{
+                                return '刚刚';
+                                //}
+                            }
+                        } else {
+                            return '刚刚';
+                        }
+                    }
+                } else {
+                    return '刚刚';
+                }
+            }
+        }
+
+        /**
+         * 保存base64图片
+         * @param $base64
+         * @param $save_file   //无扩展名
+         * @return false|string
+         */
+        public function saveBase64Image($base64, $save_file)
+        {
+            //匹配出图片的格式
+            $return = preg_match('/^(data:\s*image\/(\w+);base64,)/', $base64, $result);
+            if ($return) {
+                $type     = $result[2];
+                $new_file = $save_file . '.' . $type;
+                if (file_put_contents($new_file, base64_decode(str_replace($result[1], '', $base64)))) {
+                    return $type;
+                } else {
+                    return FALSE;
+                }
+            } else {
+                return FALSE;
+            }
         }
     }

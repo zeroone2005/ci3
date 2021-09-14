@@ -388,6 +388,10 @@
                 if ($this->timestamps !== FALSE && $this->_created_at_field) {
                     $data[$this->_created_at_field] = $this->_the_timestamp();
                 }
+                if ($this->timestamps !== FALSE && $this->_updated_at_field) {
+                    $data[$this->_updated_at_field] = $this->_the_timestamp();
+                }
+
                 $data = $this->trigger('before_create', $data);
                 if ($this->_database->insert($this->table, $data)) {
                     $this->_prep_after_write();
@@ -411,6 +415,10 @@
                     if ($this->timestamps !== FALSE && $this->_created_at_field) {
                         $row[$this->_created_at_field] = $this->_the_timestamp();
                     }
+                    if ($this->timestamps !== FALSE && $this->_updated_at_field) {
+                        $data[$this->_updated_at_field] = $this->_the_timestamp();
+                    }
+
                     $row = $this->trigger('before_create', $row);
                     if ($this->_database->insert($this->table, $row)) {
                         $return[] = $this->_database->insert_id();
@@ -889,7 +897,6 @@
          */
         public function get_all($where = NULL)
         {
-
             $data = $this->_get_from_cache();
 
             if (isset($data) && $data !== FALSE) {
@@ -924,8 +931,8 @@
                     $data = $this->trigger('after_get', $data);
                     $data = $this->_prep_after_read($data, TRUE);
                     $this->_write_to_cache($data);
-
                     if (method_exists($this, 'convert') && $this->is_convert) {
+
                         foreach ($data as $key => $row) {
                             $data[$key] = $this->convert($row);
                         }
@@ -1115,6 +1122,12 @@
                                 $sub_results->with($with_relation, [$request['parameters']['with']]);
                             }
                         }
+
+                        if (array_key_exists('convert', $request['parameters'])) {
+                            if (FALSE === $request['parameters']['convert']) {
+                                $sub_results->to_convert(FALSE);
+                            }
+                        }
                     }
 
                     $sub_results = $sub_results->where($foreign_key, $local_key_values)->get_all();
@@ -1143,6 +1156,12 @@
                             $the_where = array_key_exists('where', $request['parameters']) ? 'where' : 'non_exclusive_where';
 
                             $this->_database->where($request['parameters'][$the_where], NULL, NULL, FALSE, FALSE, TRUE);
+                        }
+
+                        if (array_key_exists('convert', $request['parameters'])) {
+                            if (FALSE === $request['parameters']['convert']) {
+                                $sub_results->to_convert(FALSE);
+                            }
                         }
                     }
                     $this->_database->where_in($pivot_table . '.' . $pivot_local_key, $local_key_values);
@@ -1440,7 +1459,7 @@
          */
         public function fields($fields = NULL)
         {
-            if (isset($fields)) {
+              if (isset($fields)) {
                 if ($fields == '*count*') {
                     $this->_select = '';
                     $this->_database->select('COUNT(*) AS counted_rows', FALSE);
@@ -1888,20 +1907,6 @@
             return $this;
         }
 
-
-        /**
-         * where字符串
-         * @param $str
-         * @return $this
-         */
-        public function where_str($str) {
-            if ($str) {
-                $this->where($str, NULL, NULL, FALSE, FALSE, TRUE);
-            }
-            return $this;
-        }
-
-
         /**
          * 下划线转驼峰(大驼峰)
          *
@@ -1957,4 +1962,10 @@
             $this->cache->redis->save($cache_name, $cache_data, 10 * 24 * 3600);
         }
 
+        public function where_str($str) {
+            if ($str) {
+                $this->where($str, NULL, NULL, FALSE, FALSE, TRUE);
+            }
+            return $this;
+        }
     }
